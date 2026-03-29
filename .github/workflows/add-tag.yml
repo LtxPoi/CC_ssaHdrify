@@ -21,8 +21,15 @@ jobs:
           echo Using version file ${{inputs.version_file}}
           echo Version: $(<${{inputs.version_file}})
 
-      - name: Update tag
-        run: git tag $(<${{inputs.version_file}}) -f
+      - name: Create tag (skip if already exists)
+        run: |
+          TAG=$(<${{inputs.version_file}})
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists, skipping"
+          else
+            git tag "$TAG"
+            echo "Created tag $TAG"
+          fi
 
       - name: Push tag
-        run: git push origin --tags -f
+        run: git push origin --tags
