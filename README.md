@@ -70,8 +70,7 @@ Theoretically this process preserves color accuracy. However, due to the complex
 >
 > | 参数 / Parameter | 默认值 / Default | 说明 / Description |
 > |---|---|---|
-> | Target brightness | 100 nits | SDR 字幕亮度峰值。字幕太亮就调低，太暗就调高 |
-> |                   |          | Peak brightness for SDR subtitles. Decrease if too bright, increase if too dim |
+> | Target brightness | 100 nits | SDR 字幕亮度峰值。字幕太亮就调低，太暗就调高。Peak brightness for SDR subtitles. Decrease if too bright, increase if too dim. |
 
 ---
 
