@@ -27,25 +27,6 @@ COLOURSPACE_BT2100_PQ = RGB_Colourspace(
 """HDR color space on display side."""
 
 
-# def apply_oetf(source: list[float], luma: float):
-#     """
-#     args:
-#     source: linear RGB tuple (0-1, 0-1, 0-1)
-#     luma: luma value for the ORIGINAL sRGB colour.
-#     """
-#     args = parse_args()
-#     pq_result = colour.oetf(source, 'ITU-R BT.2100 PQ')
-#     hlg_result = colour.oetf(source, 'ITU-R BT.2100 HLG')
-#
-#     if args.gamma == 'pq':
-#         return pq_result
-#     elif args.gamma == 'hlg':
-#         return hlg_result
-#     else:
-#         # linear mix between 0.1 and 0.2
-#         pq_mix_ratio = (np.clip(luma, 0.1, 0.2) - 0.1) / 0.1
-#         return hlg_result * (1 - pq_mix_ratio) + pq_result * pq_mix_ratio
-
 
 def sRgbToHdr(source: tuple[int, int, int]) -> tuple[int, int, int]:
     """
@@ -123,28 +104,37 @@ def ssaProcessor(fname: str):
         return
 
     try:
-        with open(fname, 'rb') as undetectedStringFile:
-            detected = from_bytes(undetectedStringFile.read())
+        with open(fname, 'rb') as raw_file:
+            detected = from_bytes(raw_file.read())
             content = detected.best()
-            if content is None:
-                print(f'Error: could not detect encoding for {fname}')
-                return
-            sub = ssa.parse(StringIO(str(content)))
+    except OSError as e:
+        print(f'Error reading {fname}: {e}')
+        return
 
-            for s in sub.styles:
-                transformColour(s.primary_color)
-                transformColour(s.secondary_color)
-                transformColour(s.outline_color)
-                transformColour(s.back_color)
+    if content is None:
+        print(f'Error: could not detect encoding for {fname}')
+        return
 
-            for e in sub.events:
-                transformEvent(e)
-
-            output_fname = os.path.splitext(fname)
-            output_fname = output_fname[0] + '.hdr.ass'
-
-            with open(output_fname, 'w', encoding='utf_8_sig') as f:
-                sub.dump_file(f)
-                print(f'Wrote {output_fname}')
+    try:
+        sub = ssa.parse(StringIO(str(content)))
     except Exception as e:
-        print(f'Error converting {fname}: {e}')
+        print(f'Error parsing {fname}: {e}')
+        return
+
+    for s in sub.styles:
+        transformColour(s.primary_color)
+        transformColour(s.secondary_color)
+        transformColour(s.outline_color)
+        transformColour(s.back_color)
+
+    for e in sub.events:
+        transformEvent(e)
+
+    output_fname = os.path.splitext(fname)[0] + '.hdr.ass'
+
+    try:
+        with open(output_fname, 'w', encoding='utf_8_sig') as f:
+            sub.dump_file(f)
+            print(f'Wrote {output_fname}')
+    except OSError as e:
+        print(f'Error writing {output_fname}: {e}')
