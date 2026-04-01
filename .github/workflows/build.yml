@@ -23,7 +23,7 @@ jobs:
     needs: get-version
     strategy:
       matrix:
-        os: [ macos, windows, ubuntu ]
+        os: [ macos, windows ]
 
     steps:
       - uses: actions/checkout@v4
@@ -45,8 +45,8 @@ jobs:
           }
           pip install pyinstaller
 
-      - name: Mac/Linux dependency
-        if: matrix.os == 'macos' || matrix.os == 'ubuntu'
+      - name: Mac dependency
+        if: matrix.os == 'macos'
         run: |
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then
@@ -59,8 +59,8 @@ jobs:
         run: |
           pyinstaller -y ssa_hdrify_windows.spec
 
-      - name: Mac/Linux Build
-        if: matrix.os == 'macos' || matrix.os == 'ubuntu'
+      - name: Mac Build
+        if: matrix.os == 'macos'
         run: |
           pyinstaller -y ssa_hdrify_macos.spec -- --app-version=$(<VERSION)
 

@@ -20,5 +20,5 @@ class OptionFrame(LabelFrame):
         brightness_frame.grid(row=0, column=1, sticky="ew", padx=5, pady=5)
 
         # Select file button
-        select_file_button = FileSelectionButton(master=self)
-        select_file_button.grid(row=1, column=0, columnspan=2, pady=5)
+        self.select_file_button = FileSelectionButton(master=self)
+        self.select_file_button.grid(row=1, column=0, columnspan=2, pady=5)

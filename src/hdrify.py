@@ -28,7 +28,7 @@ COLOURSPACE_BT2100_PQ = RGB_Colourspace(
 
 
 
-def sRgbToHdr(source: tuple[int, int, int]) -> tuple[int, int, int]:
+def sRgbToHdr(source: tuple[int, int, int], target_brightness: int | None = None) -> tuple[int, int, int]:
     """
     Convert RGB color in SDR color space to HDR color space.
 
@@ -52,7 +52,7 @@ def sRgbToHdr(source: tuple[int, int, int]) -> tuple[int, int, int]:
     if source == (0, 0, 0):
         return (0, 0, 0)
 
-    srgb_brightness = config.targetBrightness
+    srgb_brightness = target_brightness if target_brightness is not None else config.targetBrightness
 
     normalized_sdr_color = np.array(source) / 255
     xyY_sdr_color = XYZ_to_xyY(sRGB_to_XYZ(normalized_sdr_color, apply_cctf_decoding=True))
@@ -68,37 +68,40 @@ def sRgbToHdr(source: tuple[int, int, int]) -> tuple[int, int, int]:
     return (int(output[0]), int(output[1]), int(output[2]))
 
 
-def transformColour(colour):
+def transformColour(colour, target_brightness: int | None = None):
     rgb = (colour.r, colour.g, colour.b)
-    transformed = sRgbToHdr(rgb)
+    transformed = sRgbToHdr(rgb, target_brightness)
     # TODO process alpha channel in styles
     colour.r = transformed[0]
     colour.g = transformed[1]
     colour.b = transformed[2]
 
 
-def eventColorReplacer(match):
-    prefix = match.group(1)
-    hex_colour = match.group(2)
+def _makeEventColorReplacer(target_brightness: int | None = None):
+    def eventColorReplacer(match):
+        prefix = match.group(1)
+        hex_colour = match.group(2)
 
-    alpha = hex_colour[:2] if len(hex_colour) == 8 else ''
-    hex_colour = hex_colour[2:] if len(hex_colour) == 8 else hex_colour
-    hex_colour = hex_colour.rjust(6, '0')
-    b = int(hex_colour[0:2], 16)
-    g = int(hex_colour[2:4], 16)
-    r = int(hex_colour[4:6], 16)
+        alpha = hex_colour[:2] if len(hex_colour) == 8 else ''
+        hex_colour = hex_colour[2:] if len(hex_colour) == 8 else hex_colour
+        hex_colour = hex_colour.rjust(6, '0')
+        b = int(hex_colour[0:2], 16)
+        g = int(hex_colour[2:4], 16)
+        r = int(hex_colour[4:6], 16)
 
-    (r, g, b) = sRgbToHdr((r, g, b))
-    return prefix + alpha + '{:02x}{:02x}{:02x}'.format(b, g, r)
+        (r, g, b) = sRgbToHdr((r, g, b), target_brightness)
+        return prefix + alpha + '{:02x}{:02x}{:02x}'.format(b, g, r)
+    return eventColorReplacer
 
 
-def transformEvent(event):
+def transformEvent(event, target_brightness: int | None = None):
     line = event.text
-    new_line = re.sub(r'(\\[0-9]?c&H)([0-9a-fA-F]{2,})(?=[&})\\])', eventColorReplacer, line)
+    replacer = _makeEventColorReplacer(target_brightness)
+    new_line = re.sub(r'(\\[0-9]?c&H)([0-9a-fA-F]{2,})(?=[&})\\])', replacer, line)
     event.text = new_line
 
 
-def ssaProcessor(fname: str):
+def ssaProcessor(fname: str, target_brightness: int | None = None):
     if not os.path.isfile(fname):
         print(f'Missing file: {fname}')
         return
@@ -122,19 +125,25 @@ def ssaProcessor(fname: str):
         return
 
     for s in sub.styles:
-        transformColour(s.primary_color)
-        transformColour(s.secondary_color)
-        transformColour(s.outline_color)
-        transformColour(s.back_color)
+        transformColour(s.primary_color, target_brightness)
+        transformColour(s.secondary_color, target_brightness)
+        transformColour(s.outline_color, target_brightness)
+        transformColour(s.back_color, target_brightness)
 
     for e in sub.events:
-        transformEvent(e)
+        transformEvent(e, target_brightness)
 
     output_fname = os.path.splitext(fname)[0] + '.hdr.ass'
+    tmp_fname = output_fname + '.tmp'
 
     try:
-        with open(output_fname, 'w', encoding='utf_8_sig') as f:
+        with open(tmp_fname, 'w', encoding='utf_8_sig') as f:
             sub.dump_file(f)
-            print(f'Wrote {output_fname}')
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp_fname, output_fname)
+        print(f'Wrote {output_fname}')
     except OSError as e:
         print(f'Error writing {output_fname}: {e}')
+        if os.path.exists(tmp_fname):
+            os.remove(tmp_fname)
