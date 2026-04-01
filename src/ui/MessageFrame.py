@@ -1,13 +1,35 @@
-import io
+import queue
 import tkinter
 from tkinter.ttk import LabelFrame
+
+
+class QueueStream:
+    """线程安全的文本输出流，写入底层 queue.Queue。
+
+    实现了 write() / flush() 接口，可直接用于
+    contextlib.redirect_stdout / redirect_stderr。
+    消费即释放，无内存积累。
+    """
+
+    def __init__(self) -> None:
+        self._queue: queue.Queue[str] = queue.Queue()
+
+    def write(self, text: str) -> None:
+        if text:
+            self._queue.put(text)
+
+    def flush(self) -> None:
+        pass  # 满足 TextIO 接口，无需实际实现
+
+    def get_queue(self) -> "queue.Queue[str]":
+        return self._queue
 
 
 class MessageFrame(LabelFrame):
     def __init__(self, master, **kwargs):
         super().__init__(master, **kwargs)
-        self.messageStream = io.StringIO()
-        self.messagePointer = 0
+        self.messageStream = QueueStream()
+        self._queue = self.messageStream.get_queue()
         self.callbackId = ""
         self.text = tkinter.Text(master=self)
         self.text.pack(expand=True, fill='both')
@@ -15,11 +37,13 @@ class MessageFrame(LabelFrame):
         self.updateText()
 
     def updateText(self):
-        self.messageStream.seek(self.messagePointer, io.SEEK_SET)
-
         self.text.config(state=tkinter.NORMAL)
-        self.text.insert(tkinter.END, self.messageStream.read())
+        try:
+            while True:
+                chunk = self._queue.get_nowait()
+                self.text.insert(tkinter.END, chunk)
+        except queue.Empty:
+            pass
         self.text.config(state=tkinter.DISABLED)
-
-        self.messagePointer = self.messageStream.tell()
+        self.text.see(tkinter.END)  # 自动滚动到最新消息
         self.callbackId = self.after(500, self.updateText)

@@ -6,15 +6,23 @@ from conversion_setting import config
 
 
 def validateBrightness(newBrightness):
-    valid = re.match('^[0-9]*$', newBrightness) is not None
-    if valid:
-        if len(newBrightness) == 0:
-            return True
-        else:
-            config.targetBrightness = min(int(newBrightness), 10000)
-        return True
-    else:
-        return False
+    """验证亮度输入值。
+
+    规则：
+    - 只允许纯数字
+    - 允许临时清空（输入中间状态）
+    - 有效范围：1–10000（nits）
+    - 超界时拒绝键入，保持显示值与实际生效值严格一致
+    """
+    if re.match('^[0-9]*$', newBrightness) is None:
+        return False           # 拒绝非数字字符
+    if len(newBrightness) == 0:
+        return True            # 允许临时清空
+    value = int(newBrightness)
+    if value < 1 or value > 10000:
+        return False           # 超界直接阻止键入，不截断
+    config.targetBrightness = value
+    return True
 
 
 class BrightnessOption(Frame):
