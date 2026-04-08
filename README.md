@@ -4,7 +4,7 @@
 >
 > *A tool to convert SSA/ASS subtitle colors from SDR to HDR color space.*
 
-Fork 自 [gky99/ssaHdrify](https://github.com/gky99/ssaHdrify)，修复了若干 bug。
+Fork 自 [gky99/ssaHdrify](https://github.com/gky99/ssaHdrify)，包含多项 bug 修复与质量改进。
 
 ---
 
@@ -93,6 +93,24 @@ cd path/to/ssaHdrify
 pip install -r requirements.txt
 python src/main.py
 ```
+
+---
+
+## 改进 | Improvements over upstream
+
+相比原项目，本 fork 增加了以下改进：
+
+Compared to the upstream project, this fork includes the following improvements:
+
+- **输入验证 | Input validation**: 亮度输入框清空后阻止转换，防止静默使用旧值 / Prevents conversion with empty brightness field
+- **CI 安全 | CI security**: VERSION 文件内容正则校验，防止命令注入 / Regex validation of VERSION file content
+- **构建可靠性 | Build reliability**: PyInstaller 版本号改用环境变量传递，图标使用绝对路径 / ENV var for version, absolute icon paths
+- **颜色正则 | Color regex**: 只匹配 6/8 位十六进制颜色，避免误匹配 / Only matches valid 6/8-digit hex colors
+- **编码检测 | Encoding detection**: 低置信度时输出警告，提示可能乱码 / Warns when encoding detection confidence is low
+- **安全关闭 | Safe shutdown**: 关闭窗口时主动取消工作线程，不留后台进程 / Cancels worker thread on window close
+- **CI 测试 | CI testing**: 10 个 pytest 回归测试，打包前必须通过 / 10 pytest regression tests, must pass before packaging
+- **CI 优化 | CI optimization**: path filter 避免非代码变更触发构建 / Path filter prevents builds on non-code changes
+- **Python 3.14 兼容 | Python 3.14 support**: 放宽依赖版本约束 / Loosened dependency version constraints
 
 ---
 
