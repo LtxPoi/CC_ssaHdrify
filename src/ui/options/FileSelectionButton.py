@@ -49,7 +49,7 @@ class FileSelectionButton(Button):
                 except tkinter.TclError:
                     pass  # 窗口已销毁，状态恢复无意义，直接跳过
 
-        self._worker_thread = threading.Thread(target=worker, daemon=False)
+        self._worker_thread = threading.Thread(target=worker, daemon=True)
         self._worker_thread.start()
 
     def _restoreButton(self):
