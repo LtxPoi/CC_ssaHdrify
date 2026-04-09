@@ -4,7 +4,11 @@ from __future__ import annotations
 
 import os
 import re
+import warnings
 from io import StringIO
+
+# Suppress colour-science optional dependency warnings (scipy, matplotlib not needed)
+warnings.filterwarnings("ignore", message=".*related API features are not available.*")
 
 import ass as ssa
 import numpy as np

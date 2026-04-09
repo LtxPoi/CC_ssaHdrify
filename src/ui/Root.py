@@ -55,7 +55,7 @@ class Root(Tk):
 
     @staticmethod
     def _lang_btn_label() -> str:
-        return "\u4e2d\u6587" if i18n.current() == "zh" else "English"
+        return "\u8bed\u8a00" if i18n.current() == "zh" else "Language"
 
     def _set_language(self, lang: str):
         if lang == i18n.current():
