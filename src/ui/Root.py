@@ -31,8 +31,8 @@ class Root(Tk):
         self.wm_minsize(640, 400)
 
         self.rowconfigure(0, weight=0)  # language button row
-        self.rowconfigure(1, weight=3)  # options (more space)
-        self.rowconfigure(2, weight=1)  # message (compact, scrollable)
+        self.rowconfigure(1, weight=0)  # options (natural size)
+        self.rowconfigure(2, weight=1)  # message (fills remaining, has scrollbar)
         self.columnconfigure(0, weight=1)
 
         # Language menu button (top-left)
