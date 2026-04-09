@@ -23,6 +23,7 @@ from colour.models import (
     RGB_COLOURSPACE_BT2020,
 )
 
+import i18n
 from conversion_setting import config
 
 COLOURSPACE_BT2100_PQ = RGB_Colourspace(
@@ -123,14 +124,14 @@ def transformEvent(event, target_brightness: int | None = None, eotf: str = "PQ"
 
 def ssaProcessor(fname: str, target_brightness: int | None = None, eotf: str = "PQ"):
     if not os.path.isfile(fname):
-        print(f'Missing file: {fname}')
+        print(i18n.get("msg_missing_file").format(fname))
         return
 
     try:
         with open(fname, 'rb') as raw_file:
             raw_data = raw_file.read()
     except OSError as e:
-        print(f'Error reading {fname}: {e}')
+        print(i18n.get("msg_read_error").format(fname, e))
         return
 
     # Explicit BOM detection — bypasses statistical inference when BOM is present
@@ -144,27 +145,25 @@ def ssaProcessor(fname: str, target_brightness: int | None = None, eotf: str = "
         try:
             decoded_text = raw_data.decode(bom_encoding)
         except (UnicodeDecodeError, LookupError) as e:
-            print(f'Error decoding {fname} with BOM encoding {bom_encoding}: {e}')
+            print(i18n.get("msg_decode_error").format(fname, bom_encoding, e))
             return
         coherence_warning = False
     else:
         detected = from_bytes(raw_data)
         content = detected.best()
         if content is None:
-            print(f'Error: could not detect encoding for {fname}')
+            print(i18n.get("msg_detect_encoding_fail").format(fname))
             return
         coherence_warning = content.coherence < 0.5
         decoded_text = str(content)
 
     if coherence_warning:
-        print(f'Warning: low confidence encoding detection for {fname} '
-              f'(encoding={content.encoding}, coherence={content.coherence:.1%}). '
-              f'Output may contain garbled text.')
+        print(i18n.get("msg_low_confidence").format(fname, content.encoding, f"{content.coherence:.1%}"))
 
     try:
         sub = ssa.parse(StringIO(decoded_text))
     except Exception as e:
-        print(f'Error parsing {fname}: {e}')
+        print(i18n.get("msg_parse_error").format(fname, e))
         return
 
     for s in sub.styles:
@@ -185,8 +184,8 @@ def ssaProcessor(fname: str, target_brightness: int | None = None, eotf: str = "
             f.flush()
             os.fsync(f.fileno())
         os.replace(tmp_fname, output_fname)
-        print(f'Wrote {output_fname}')
+        print(i18n.get("msg_wrote").format(output_fname))
     except OSError as e:
-        print(f'Error writing {output_fname}: {e}')
+        print(i18n.get("msg_write_error").format(output_fname, e))
         if os.path.exists(tmp_fname):
             os.remove(tmp_fname)

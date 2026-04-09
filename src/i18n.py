@@ -49,6 +49,23 @@ _STRINGS: dict[str, dict[str, str]] = {
         "en": "Relative brightness, adapts to display. For broadcast HDR and SDR-compatible content.",
         "zh": "\u76f8\u5bf9\u4eae\u5ea6\u6620\u5c04\uff0c\u9002\u5e94\u663e\u793a\u5668\u3002\u9002\u7528\u4e8e\u5e7f\u64ad HDR \u53ca\u9700\u517c\u5bb9 SDR \u7684\u5185\u5bb9\u3002",
     },
+    "msg_missing_file": {"en": "Missing file: {0}", "zh": "\u6587\u4ef6\u4e0d\u5b58\u5728\uff1a{0}"},
+    "msg_read_error": {"en": "Error reading {0}: {1}", "zh": "\u8bfb\u53d6\u5931\u8d25 {0}\uff1a{1}"},
+    "msg_decode_error": {
+        "en": "Error decoding {0} with BOM encoding {1}: {2}",
+        "zh": "\u89e3\u7801\u5931\u8d25 {0}\uff08BOM \u7f16\u7801 {1}\uff09\uff1a{2}",
+    },
+    "msg_detect_encoding_fail": {
+        "en": "Error: could not detect encoding for {0}",
+        "zh": "\u9519\u8bef\uff1a\u65e0\u6cd5\u68c0\u6d4b {0} \u7684\u7f16\u7801",
+    },
+    "msg_low_confidence": {
+        "en": "Warning: low confidence encoding detection for {0} (encoding={1}, coherence={2}). Output may contain garbled text.",
+        "zh": "\u8b66\u544a\uff1a{0} \u7f16\u7801\u68c0\u6d4b\u7f6e\u4fe1\u5ea6\u8f83\u4f4e\uff08\u7f16\u7801={1}\uff0c\u7f6e\u4fe1\u5ea6={2}\uff09\uff0c\u8f93\u51fa\u53ef\u80fd\u542b\u4e71\u7801\u3002",
+    },
+    "msg_parse_error": {"en": "Error parsing {0}: {1}", "zh": "\u89e3\u6790\u5931\u8d25 {0}\uff1a{1}"},
+    "msg_wrote": {"en": "Wrote {0}", "zh": "\u5df2\u5199\u5165 {0}"},
+    "msg_write_error": {"en": "Error writing {0}: {1}", "zh": "\u5199\u5165\u5931\u8d25 {0}\uff1a{1}"},
     "ass_filter": {"en": "ASS files", "zh": "ASS \u5b57\u5e55\u6587\u4ef6"},
     "all_filter": {"en": "all files", "zh": "\u6240\u6709\u6587\u4ef6"},
     "brightness_rec_pq": {
