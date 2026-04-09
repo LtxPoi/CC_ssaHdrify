@@ -29,8 +29,9 @@ class EotfOption(Frame):
         self.bind("<Configure>", self._update_wraplength)
 
     def _update_wraplength(self, _event=None):
-        # Set wraplength to frame width minus small padding
-        width = self.winfo_width() - 10
+        # Use parent (OptionFrame) width / 2 as reference — stable across language changes
+        parent_w = self.master.winfo_width()
+        width = (parent_w // 2) - 20 if parent_w > 100 else self.winfo_width() - 10
         if width > 50:
             self._desc.configure(wraplength=width)
 
