@@ -9,7 +9,7 @@ _BRIGHTNESS_REC_KEYS = {"PQ": "brightness_rec_pq", "HLG": "brightness_rec_hlg"}
 
 def validateBrightness(newBrightness):
     """Validate-only: does NOT mutate config (read happens at conversion time)."""
-    if not newBrightness.isdigit() and newBrightness != '':
+    if not newBrightness.isdecimal() and newBrightness != '':
         return False
     if newBrightness == '':
         return True

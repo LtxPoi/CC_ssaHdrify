@@ -23,7 +23,7 @@ class FileSelectionButton(Button):
             return
 
         brightness_str = self.master.brightness_frame.target_brightness_var.get()
-        if not brightness_str or not brightness_str.isdigit() or int(brightness_str) < 1:
+        if not brightness_str or not brightness_str.isdecimal() or int(brightness_str) < 1:
             messagebox.showerror(i18n.get("invalid_brightness"),
                                  i18n.get("brightness_error_msg"))
             return
