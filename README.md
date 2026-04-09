@@ -44,8 +44,8 @@ SSA/ASS 字幕颜色 (sRGB)
   ├─ 4. CIE xyY → BT.2020 RGB
   │     Map from CIE xyY to BT.2020 RGB
   │
-  ├─ 5. PQ (ST 2084) OETF 编码
-  │     Apply PQ OETF encoding
+  ├─ 5. PQ (ST 2084) 或 HLG (ARIB STD-B67) OETF 编码
+  │     Apply PQ or HLG OETF encoding
   │
   └─ 6. 输出 RGB
         Output RGB
@@ -62,15 +62,20 @@ Theoretically this process preserves color accuracy. However, due to the complex
 ## 使用方法 | How to Use
 
 1. 运行程序 / Run the program
-2. 设置字幕目标亮度（默认 100 nits）/ Set target subtitle brightness (default: 100 nits)
-3. 点击按钮选择字幕文件（支持多选）/ Click the button to select subtitle files (multi-select supported)
-4. 输出文件扩展名为 `.hdr.ass` / Output files will have the `.hdr.ass` extension
+2. 选择 EOTF 曲线（PQ 或 HLG）/ Select EOTF curve (PQ or HLG)
+3. 设置字幕目标亮度（默认 203 nits）/ Set target subtitle brightness (default: 203 nits)
+4. 点击按钮选择字幕文件（支持多选）/ Click the button to select subtitle files (multi-select supported)
+5. 输出文件扩展名为 `.hdr.ass` / Output files will have the `.hdr.ass` extension
 
 > **参数说明 | Parameter Guide**
 >
 > | 参数 / Parameter | 默认值 / Default | 说明 / Description |
 > |---|---|---|
-> | Target brightness | 100 nits | SDR 字幕亮度峰值。字幕太亮就调低，太暗就调高。Peak brightness for SDR subtitles. Decrease if too bright, increase if too dim. |
+> | EOTF curve | PQ | PQ (ST 2084) 用于 HDR10/杜比视界；HLG 用于广播 HDR。PQ for HDR10/Dolby Vision; HLG for broadcast HDR. |
+> | Target brightness | 203 nits | SDR 字幕亮度峰值（BT.2408 标准值）。字幕太亮就调低，太暗就调高。Peak brightness per BT.2408. Decrease if too bright, increase if too dim. |
+>
+> 界面支持中英双语切换（左上角 Language 按钮）。
+> UI supports English/Chinese switching (top-left Language button).
 
 ---
 
@@ -108,7 +113,15 @@ Compared to the upstream project, this fork includes the following improvements:
 - **颜色正则 | Color regex**: 只匹配 6/8 位十六进制颜色，避免误匹配 / Only matches valid 6/8-digit hex colors
 - **编码检测 | Encoding detection**: 低置信度时输出警告，提示可能乱码 / Warns when encoding detection confidence is low
 - **安全关闭 | Safe shutdown**: 关闭窗口时主动取消工作线程，不留后台进程 / Cancels worker thread on window close
-- **CI 测试 | CI testing**: 10 个 pytest 回归测试，打包前必须通过 / 10 pytest regression tests, must pass before packaging
+- **HLG 支持 | HLG support**: 新增 BT.2100 HLG 色彩空间，EOTF 下拉框可选 PQ/HLG / Added HLG color space, EOTF dropdown with PQ/HLG
+- **中英双语 | i18n**: 界面支持中英文切换，首次跟随系统语言，选择自动保存 / UI language switching (EN/CN), persists to config
+- **高 DPI 适配 | High DPI**: Windows Per-Monitor DPI Aware v2，文字清晰不模糊 / Crisp text on high-DPI displays
+- **EOTF 说明 | EOTF description**: 下拉框下方动态显示选项释义 / Dynamic explanation below EOTF dropdown
+- **亮度推荐 | Brightness recommendation**: 输入框下方显示推荐范围，随 EOTF 切换 / Dynamic recommendation follows EOTF
+- **默认亮度 | Default brightness**: 从 100 改为 203 nits（BT.2408 标准）/ Changed from 100 to 203 nits per BT.2408
+- **单文件打包 | One-file packaging**: Windows exe 从文件夹模式改为单文件 / Single exe instead of folder
+- **BOM 编码检测 | BOM detection**: UTF-8/UTF-16 BOM 显式检测，优先于统计推断 / Explicit BOM detection before inference
+- **CI 测试 | CI testing**: 13 个 pytest 回归测试（含 HLG），打包前必须通过 / 13 pytest tests (incl. HLG), must pass before packaging
 - **CI 优化 | CI optimization**: path filter 避免非代码变更触发构建 / Path filter prevents builds on non-code changes
 - **Python 3.14 兼容 | Python 3.14 support**: 放宽依赖版本约束 / Loosened dependency version constraints
 
