@@ -28,7 +28,7 @@ class FileSelectionButton(Button):
             return
 
         self.configure(state='disabled')
-        brightness = config.targetBrightness
+        brightness = int(brightness_str)
         self._cancel_event.clear()
 
         def worker():

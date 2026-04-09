@@ -58,6 +58,13 @@ def test_regex_matches_8digit_color():
     assert event.text != r"{\1c&H00FFFFFF&}Hello"
 
 
+def test_regex_ignores_7digit_color():
+    """7-digit hex color should NOT be matched (only 6 or 8 are valid)."""
+    event = FakeEvent(r"{\1c&HFFFFFFF&}Hello")
+    transformEvent(event, target_brightness=100)
+    assert event.text == r"{\1c&HFFFFFFF&}Hello"
+
+
 def test_regex_ignores_short_color():
     """Colors shorter than 6 hex digits should NOT be matched."""
     event = FakeEvent(r"{\1c&HFF&}Hello")

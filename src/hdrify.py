@@ -48,13 +48,16 @@ def sRgbToHdr(source: tuple[int, int, int], target_brightness: int | None = None
     args:
     colour -- (0-255, 0-255, 0-255)
     """
-    if source == (0, 0, 0):
+    if source == (0, 0, 0) or all(c == 0 for c in source):
         return (0, 0, 0)
 
     srgb_brightness = target_brightness if target_brightness is not None else config.targetBrightness
 
     normalized_sdr_color = np.array(source) / 255
     xyY_sdr_color = XYZ_to_xyY(sRGB_to_XYZ(normalized_sdr_color, apply_cctf_decoding=True))
+
+    if xyY_sdr_color[2] <= 0:
+        return (0, 0, 0)
 
     xyY_hdr_color = xyY_sdr_color.copy()
     target_luminance = xyY_sdr_color[2] * srgb_brightness
@@ -91,7 +94,7 @@ def transformEvent(event, target_brightness: int | None = None):
         (r, g, b) = sRgbToHdr((r, g, b), target_brightness)
         return prefix + alpha + '{:02x}{:02x}{:02x}'.format(b, g, r)
 
-    event.text = re.sub(r'(\\[0-9]?c&H)([0-9a-fA-F]{6,8})(?=[&})\\])', _replaceColor, event.text)
+    event.text = re.sub(r'(\\[0-9]?c&H)([0-9a-fA-F]{6}|[0-9a-fA-F]{8})(?=[&})\\])', _replaceColor, event.text)
 
 
 def ssaProcessor(fname: str, target_brightness: int | None = None):
@@ -101,23 +104,41 @@ def ssaProcessor(fname: str, target_brightness: int | None = None):
 
     try:
         with open(fname, 'rb') as raw_file:
-            detected = from_bytes(raw_file.read())
-            content = detected.best()
+            raw_data = raw_file.read()
     except OSError as e:
         print(f'Error reading {fname}: {e}')
         return
 
-    if content is None:
-        print(f'Error: could not detect encoding for {fname}')
-        return
+    # Explicit BOM detection — bypasses statistical inference when BOM is present
+    bom_encoding = None
+    if raw_data[:3] == b'\xef\xbb\xbf':
+        bom_encoding = 'utf-8-sig'
+    elif raw_data[:2] in (b'\xff\xfe', b'\xfe\xff'):
+        bom_encoding = 'utf-16'
 
-    if content.coherence < 0.5:
+    if bom_encoding:
+        try:
+            decoded_text = raw_data.decode(bom_encoding)
+        except (UnicodeDecodeError, LookupError) as e:
+            print(f'Error decoding {fname} with BOM encoding {bom_encoding}: {e}')
+            return
+        coherence_warning = False
+    else:
+        detected = from_bytes(raw_data)
+        content = detected.best()
+        if content is None:
+            print(f'Error: could not detect encoding for {fname}')
+            return
+        coherence_warning = content.coherence < 0.5
+        decoded_text = str(content)
+
+    if coherence_warning:
         print(f'Warning: low confidence encoding detection for {fname} '
               f'(encoding={content.encoding}, coherence={content.coherence:.1%}). '
               f'Output may contain garbled text.')
 
     try:
-        sub = ssa.parse(StringIO(str(content)))
+        sub = ssa.parse(StringIO(decoded_text))
     except Exception as e:
         print(f'Error parsing {fname}: {e}')
         return
