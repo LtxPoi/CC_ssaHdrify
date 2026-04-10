@@ -29,9 +29,13 @@ def resolve_output_path(input_path: str, template: str, eotf: str) -> str:
 
     # Strip secondary subtitle extensions so "movie.eng" stays but
     # "movie.hdr" or "movie.sdr" (from previous conversions) are removed.
-    for tag in (".hdr", ".sdr"):
-        if base_name.lower().endswith(tag):
-            base_name = base_name[: -len(tag)]
+    changed = True
+    while changed:
+        changed = False
+        for tag in (".hdr", ".sdr"):
+            if base_name.lower().endswith(tag):
+                base_name = base_name[: -len(tag)]
+                changed = True
 
     # Use str.replace() instead of str.format() to prevent attribute access
     # via malicious templates like "{name.__class__}"
@@ -39,10 +43,16 @@ def resolve_output_path(input_path: str, template: str, eotf: str) -> str:
                    .replace("{name}", base_name)
                    .replace("{eotf}", eotf.lower())
                    .replace("{dir}", dir_name))
+
+    if not os.path.basename(output_name):
+        raise ValueError("Template resolves to empty filename")
+
     result = os.path.normpath(os.path.join(dir_name, output_name))
 
     # Defense-in-depth: reject templates that escape the input directory
-    if dir_name and not result.startswith(os.path.normpath(dir_name)):
+    safe_dir = os.path.normpath(os.path.abspath(dir_name if dir_name else "."))
+    result_abs = os.path.normpath(os.path.abspath(result))
+    if not (result_abs + os.sep).startswith(safe_dir + os.sep):
         raise ValueError(f"Output path escapes input directory: {result}")
 
     return result

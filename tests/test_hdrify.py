@@ -4,6 +4,8 @@ import os
 import re
 import tempfile
 
+import pytest
+
 from hdrify import sRgbToHdr, transformEvent, ssaProcessor, srtSubProcessor, _detect_and_decode
 from converter import load_as_ass_text
 from output_naming import resolve_output_path
@@ -356,3 +358,76 @@ def test_sub_processor_roundtrip(tmp_path):
     assert output_file.exists(), "SUB conversion should produce .hdr.ass"
     content = output_file.read_text(encoding="utf-8-sig")
     assert "Hello from SUB format" in content
+
+
+# --- Path traversal / output naming regression tests ---
+
+def test_output_naming_rejects_path_traversal():
+    """Template with ../ should raise ValueError."""
+    with pytest.raises(ValueError, match="escapes input directory"):
+        resolve_output_path("/movies/sub/file.srt", "../escape/{name}.ass", "PQ")
+
+
+def test_output_naming_rejects_prefix_ambiguity():
+    """Path that escapes via prefix collision should be caught."""
+    with pytest.raises(ValueError, match="escapes input directory"):
+        resolve_output_path("/movies/sub/file.srt", "../subtitles/{name}.ass", "PQ")
+
+
+def test_output_naming_rejects_traversal_relative_input():
+    """Relative input path with ../ template should be caught."""
+    with pytest.raises(ValueError, match="escapes input directory"):
+        resolve_output_path("subtitle.srt", "../escape/{name}.ass", "PQ")
+
+
+def test_output_naming_rejects_empty_template():
+    """Empty template should raise ValueError."""
+    with pytest.raises(ValueError, match="empty filename"):
+        resolve_output_path("/movies/subtitle.srt", "", "PQ")
+
+
+def test_output_naming_strips_stacked_tags():
+    """Stacked .hdr.sdr tags should both be stripped."""
+    result = resolve_output_path("/movies/subtitle.hdr.sdr.ass", "{name}.hdr.ass", "PQ")
+    assert "subtitle.hdr.ass" in result
+    assert "subtitle.hdr.hdr.ass" not in result
+
+
+def test_processor_skips_self_overwrite(tmp_path, capsys):
+    """Processing should skip when output would overwrite input."""
+    ass_content = """\
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 1920
+PlayResY: 1080
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,Arial,48,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,2,2,2,10,10,10,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.00,0:00:05.00,Default,,0,0,0,,Hello World
+"""
+    input_file = tmp_path / "test.ass"
+    input_file.write_text(ass_content, encoding="utf-8")
+    original_content = input_file.read_text(encoding="utf-8")
+
+    ssaProcessor(str(input_file), target_brightness=100,
+                 output_path=str(input_file))
+
+    captured = capsys.readouterr()
+    assert "overwrite" in captured.out.lower()
+    assert input_file.read_text(encoding="utf-8") == original_content
+
+
+def test_detect_and_decode_utf32_le_bom(tmp_path):
+    """UTF-32-LE BOM file should not be misdetected as UTF-16."""
+    content = "[Script Info]\nScriptType: v4.00+"
+    bom = b'\xff\xfe\x00\x00'
+    encoded = content.encode('utf-32-le')
+    f = tmp_path / "utf32le.txt"
+    f.write_bytes(bom + encoded)
+    result = _detect_and_decode(str(f))
+    assert result is not None
+    assert "Script Info" in result

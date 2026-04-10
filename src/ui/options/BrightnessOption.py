@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import tkinter
 from tkinter.ttk import Frame, Label, Entry
 
@@ -9,14 +11,11 @@ _BRIGHTNESS_REC_KEYS = {"PQ": "brightness_rec_pq", "HLG": "brightness_rec_hlg"}
 
 def validateBrightness(newBrightness):
     """Validate-only: does NOT mutate config (read happens at conversion time)."""
-    if not newBrightness.isdecimal() and newBrightness != '':
-        return False
     if newBrightness == '':
         return True
-    value = int(newBrightness)
-    if value < 1 or value > 10000:
+    if not newBrightness.isdecimal():
         return False
-    return True
+    return 1 <= int(newBrightness) <= 10000
 
 
 class BrightnessOption(Frame):
@@ -35,16 +34,18 @@ class BrightnessOption(Frame):
         target_brightness_input.grid(row=0, column=1, sticky=tkinter.EW)
 
         # Recommendation label (dynamic, follows EOTF selection)
-        rec_key = _BRIGHTNESS_REC_KEYS.get(config.eotf.upper(), "brightness_rec_pq")
-        self._rec_label = Label(master=self, text=i18n.get(rec_key))
+        self._rec_label = Label(master=self, text=self._rec_text())
         self._rec_label.grid(row=1, column=0, columnspan=2, sticky=tkinter.W, pady=(8, 0))
+
+    def _rec_text(self, eotf: str | None = None) -> str:
+        """Return localized recommendation text for the given (or current) EOTF."""
+        rec_key = _BRIGHTNESS_REC_KEYS.get((eotf or config.eotf).upper(), "brightness_rec_pq")
+        return i18n.get(rec_key)
 
     def update_recommendation(self, eotf: str = "PQ"):
         """Update the recommendation text based on EOTF selection."""
-        rec_key = _BRIGHTNESS_REC_KEYS.get(eotf.upper(), "brightness_rec_pq")
-        self._rec_label.configure(text=i18n.get(rec_key))
+        self._rec_label.configure(text=self._rec_text(eotf))
 
     def refresh_language(self):
         self._label.configure(text=i18n.get("brightness_label"))
-        rec_key = _BRIGHTNESS_REC_KEYS.get(config.eotf.upper(), "brightness_rec_pq")
-        self._rec_label.configure(text=i18n.get(rec_key))
+        self._rec_label.configure(text=self._rec_text())

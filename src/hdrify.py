@@ -72,7 +72,7 @@ def sRgbToHdr(source: tuple[int, int, int], target_brightness: int | None = None
     args:
     colour -- (0-255, 0-255, 0-255)
     """
-    if source == (0, 0, 0) or all(c == 0 for c in source):
+    if source == (0, 0, 0):
         return (0, 0, 0)
 
     srgb_brightness = target_brightness if target_brightness is not None else config.targetBrightness
@@ -90,12 +90,12 @@ def sRgbToHdr(source: tuple[int, int, int], target_brightness: int | None = None
     colourspace = _COLOURSPACES.get(eotf.upper(), COLOURSPACE_BT2100_PQ)
     output = XYZ_to_RGB(xyY_to_XYZ(xyY_hdr_color), colourspace=colourspace, apply_cctf_encoding=True)
 
-    output = np.clip(np.round(output * 255), 0, 255)
-
     if np.any(np.isnan(output)):
         return (0, 0, 0)
 
-    return (int(output[0]), int(output[1]), int(output[2]))
+    output = np.clip(np.round(output * 255), 0, 255)
+
+    return tuple(int(c) for c in output)
 
 
 def transformColour(colour, target_brightness: int | None = None, eotf: str = "PQ"):
@@ -160,6 +160,10 @@ def _detect_and_decode(fname: str) -> str | None:
     bom_encoding = None
     if raw_data[:3] == b'\xef\xbb\xbf':
         bom_encoding = 'utf-8-sig'
+    elif raw_data[:4] == b'\xff\xfe\x00\x00':
+        bom_encoding = 'utf-32-le'
+    elif raw_data[:4] == b'\x00\x00\xfe\xff':
+        bom_encoding = 'utf-32-be'
     elif raw_data[:2] in (b'\xff\xfe', b'\xfe\xff'):
         bom_encoding = 'utf-16'
 
@@ -205,6 +209,31 @@ def _write_ass_output(sub, output_fname: str):
                 pass
 
 
+def _transform_and_write(sub, fname: str, target_brightness: int | None,
+                         eotf: str, output_path: str | None, cancel_event) -> None:
+    """Apply HDR color transform to parsed ASS document and write output.
+
+    Shared pipeline for both ASS/SSA and SRT/SUB processing paths.
+    """
+    for s in sub.styles:
+        transformColour(s.primary_color, target_brightness, eotf=eotf)
+        transformColour(s.secondary_color, target_brightness, eotf=eotf)
+        transformColour(s.outline_color, target_brightness, eotf=eotf)
+        transformColour(s.back_color, target_brightness, eotf=eotf)
+
+    for e in sub.events:
+        if cancel_event is not None and cancel_event.is_set():
+            print(i18n.get("cancelled"))
+            return
+        transformEvent(e, target_brightness, eotf=eotf)
+
+    output_fname = output_path if output_path is not None else os.path.splitext(fname)[0] + '.hdr.ass'
+    if os.path.normpath(os.path.abspath(output_fname)) == os.path.normpath(os.path.abspath(fname)):
+        print(i18n.get("msg_overwrite_self").format(fname))
+        return
+    _write_ass_output(sub, output_fname)
+
+
 def ssaProcessor(fname: str, target_brightness: int | None = None, eotf: str = "PQ",
                  output_path: str | None = None, cancel_event=None):
     """Process an ASS/SSA file: convert all colors to HDR and write output."""
@@ -222,24 +251,7 @@ def ssaProcessor(fname: str, target_brightness: int | None = None, eotf: str = "
         print(i18n.get("msg_parse_error").format(fname, e))
         return
 
-    for s in sub.styles:
-        transformColour(s.primary_color, target_brightness, eotf=eotf)
-        transformColour(s.secondary_color, target_brightness, eotf=eotf)
-        transformColour(s.outline_color, target_brightness, eotf=eotf)
-        transformColour(s.back_color, target_brightness, eotf=eotf)
-
-    for e in sub.events:
-        if cancel_event is not None and cancel_event.is_set():
-            print(i18n.get("cancelled"))
-            return
-        transformEvent(e, target_brightness, eotf=eotf)
-
-    if output_path is None:
-        output_fname = os.path.splitext(fname)[0] + '.hdr.ass'
-    else:
-        output_fname = output_path
-
-    _write_ass_output(sub, output_fname)
+    _transform_and_write(sub, fname, target_brightness, eotf, output_path, cancel_event)
 
 
 def srtSubProcessor(fname: str, target_brightness: int | None = None, eotf: str = "PQ",
@@ -274,21 +286,4 @@ def srtSubProcessor(fname: str, target_brightness: int | None = None, eotf: str 
         print(i18n.get("msg_parse_error").format(fname, e))
         return
 
-    for s in sub.styles:
-        transformColour(s.primary_color, target_brightness, eotf=eotf)
-        transformColour(s.secondary_color, target_brightness, eotf=eotf)
-        transformColour(s.outline_color, target_brightness, eotf=eotf)
-        transformColour(s.back_color, target_brightness, eotf=eotf)
-
-    for e in sub.events:
-        if cancel_event is not None and cancel_event.is_set():
-            print(i18n.get("cancelled"))
-            return
-        transformEvent(e, target_brightness, eotf=eotf)
-
-    if output_path is None:
-        output_fname = os.path.splitext(fname)[0] + '.hdr.ass'
-    else:
-        output_fname = output_path
-
-    _write_ass_output(sub, output_fname)
+    _transform_and_write(sub, fname, target_brightness, eotf, output_path, cancel_event)

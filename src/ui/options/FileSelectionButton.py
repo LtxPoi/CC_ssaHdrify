@@ -54,6 +54,7 @@ class FileSelectionButton(Button):
 
         def worker():
             try:
+                seen_outputs: set[str] = set()
                 for f in files:
                     if self._cancel_event.is_set():
                         print(i18n.get("cancelled"))
@@ -71,6 +72,13 @@ class FileSelectionButton(Button):
                     if os.path.normpath(output_path) == os.path.normpath(f):
                         print(i18n.get("msg_overwrite_self").format(f))
                         continue
+
+                    # Guard: skip duplicate output paths in batch mode
+                    norm_output = os.path.normpath(output_path)
+                    if norm_output in seen_outputs:
+                        print(i18n.get("msg_batch_collision").format(output_path))
+                        continue
+                    seen_outputs.add(norm_output)
 
                     if ext in _SRT_SUB_EXTS:
                         srtSubProcessor(f, target_brightness=brightness,

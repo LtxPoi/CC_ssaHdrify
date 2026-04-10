@@ -82,6 +82,10 @@ _STRINGS: dict[str, dict[str, str]] = {
         "en": "Skipped {0}: output path is the same as input (would overwrite source file).",
         "zh": "已跳过 {0}：输出路径与输入相同（会覆盖源文件）。",
     },
+    "msg_batch_collision": {
+        "en": "Skipped {0}: duplicate output path (another input already targets this file).",
+        "zh": "已跳过 {0}：输出路径重复（另一个输入文件已指向此路径）。",
+    },
     "ass_filter": {"en": "ASS files", "zh": "ASS 字幕文件"},
     "srt_filter": {"en": "SRT files", "zh": "SRT 字幕文件"},
     "sub_filter": {"en": "SUB (MicroDVD) files", "zh": "SUB (MicroDVD) 字幕文件"},
@@ -157,7 +161,7 @@ def _save_config(data: dict) -> None:
     try:
         path = _config_path()
         os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "w", encoding="utf-8") as f:
+        with open(path, "w", encoding="utf-8", newline="\n") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
     except OSError:
         pass  # Best-effort persistence

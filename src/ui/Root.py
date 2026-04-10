@@ -1,4 +1,5 @@
 import platform
+import time
 from tkinter import NSEW, Menu, Tk, messagebox
 from tkinter.ttk import Style, Menubutton
 
@@ -82,9 +83,10 @@ class Root(Tk):
             ):
                 # Yes = wait silently until conversion finishes, then close
                 self._closing = True
+                self._wait_deadline = time.monotonic() + 30
                 self.after(200, self._wait_and_close)
                 return
-            convert_btn.cancel_and_wait(timeout=2.0)
+            convert_btn.cancel_and_wait(timeout=0)
         self._closing = True
         self.textFrame.stopPolling()
         self.destroy()
@@ -94,7 +96,9 @@ class Root(Tk):
         if not self.winfo_exists():
             return
         if self.options_frame.select_file_button.is_converting:
-            self.after(200, self._wait_and_close)
-        else:
-            self.textFrame.stopPolling()
-            self.destroy()
+            if time.monotonic() < self._wait_deadline:
+                self.after(200, self._wait_and_close)
+                return
+            self.options_frame.select_file_button.cancel_and_wait(timeout=0)
+        self.textFrame.stopPolling()
+        self.destroy()

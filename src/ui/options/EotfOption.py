@@ -35,19 +35,20 @@ class EotfOption(Frame):
         if width > 50:
             self._desc.configure(wraplength=width)
 
+    def _current_desc_text(self) -> str:
+        """Return localized description for the currently selected EOTF."""
+        desc_key = _EOTF_DESC_KEYS.get(self._dropdown.get(), "eotf_pq_desc")
+        return i18n.get(desc_key)
+
     def _on_select(self, _event=None):
-        selected = self._dropdown.get()
-        config.eotf = selected
-        desc_key = _EOTF_DESC_KEYS.get(selected, "eotf_pq_desc")
-        self._desc.configure(text=i18n.get(desc_key))
+        config.eotf = self._dropdown.get()
+        self._desc.configure(text=self._current_desc_text())
         # Notify sibling brightness frame via callback
         if self._on_eotf_change:
-            self._on_eotf_change(selected)
+            self._on_eotf_change(config.eotf)
 
     def refresh_language(self):
         self._label.configure(text=i18n.get("eotf_label"))
-        selected = self._dropdown.get()
-        desc_key = _EOTF_DESC_KEYS.get(selected, "eotf_pq_desc")
-        self._desc.configure(text=i18n.get(desc_key))
+        self._desc.configure(text=self._current_desc_text())
         # Force wraplength recalculation after language change
         self.after(50, self._update_wraplength)

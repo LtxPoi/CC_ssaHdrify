@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from tkinter import StringVar, colorchooser
-from tkinter.ttk import Button, Entry, Frame, Label, LabelFrame, Separator
+import math
+
+from tkinter.ttk import Button, Entry, Frame, Label, LabelFrame
 
 import i18n
 from conversion_setting import config
@@ -133,7 +135,10 @@ class StyleSettingsPanel(LabelFrame):
 
     def _sync_float(self, attr: str, value: str) -> None:
         try:
-            setattr(config.style, attr, float(value))
+            v = float(value)
+            if not math.isfinite(v):
+                return
+            setattr(config.style, attr, v)
         except ValueError:
             pass
 
@@ -145,7 +150,7 @@ class StyleSettingsPanel(LabelFrame):
             return
         hex_rgb = result[1].lstrip("#")
         r, g, b = hex_rgb[0:2], hex_rgb[2:4], hex_rgb[4:6]
-        ass_color = f"&H00{b}{g}{r}"
+        ass_color = f"&H00{b.upper()}{g.upper()}{r.upper()}"
         setattr(config.style, attr, ass_color)
 
         # Update button label with color name
