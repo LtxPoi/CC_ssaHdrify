@@ -1,25 +1,118 @@
 import platform
 import time
-from tkinter import NSEW, Menu, Tk, messagebox
-from tkinter.ttk import Style, Menubutton
+import tkinter as tk
+import tkinter.font as tkfont
+from tkinter import NSEW, Menu, StringVar, messagebox
+
+import ttkbootstrap as ttk
+from ttkbootstrap import Menubutton
 
 import i18n
 from ui.MessageFrame import MessageFrame
 from ui.OptionFrame import OptionFrame
 
-
-def setStyle():
-    sys_name = platform.system()
-    tk_style = Style()
-    if sys_name == 'Windows':
-        tk_style.theme_use('vista')
+_LIGHT_THEME = "cosmo"
+_DARK_THEME = "darkly"
+_FONT_FAMILIES = ("Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", "Segoe UI")
+_FONT_SIZE = 10
 
 
-class Root(Tk):
+def _detect_system_dark_mode() -> bool:
+    """Return True if the OS is in dark mode. Windows only; defaults to False."""
+    if platform.system() != "Windows":
+        return False
+    try:
+        import winreg
+        key = winreg.OpenKey(
+            winreg.HKEY_CURRENT_USER,
+            r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize",
+        )
+        value, _ = winreg.QueryValueEx(key, "AppsUseLightTheme")
+        winreg.CloseKey(key)
+        return value == 0  # 0 = dark, 1 = light
+    except OSError:
+        return False
+
+
+def _pick_font_family() -> str:
+    """Return the first available font from the preferred list."""
+    available = set(tkfont.families())
+    for name in _FONT_FAMILIES:
+        if name in available:
+            return name
+    return "TkDefaultFont"
+
+
+class _ThemePopup:
+    """Custom theme dropdown using ttkbootstrap widgets (avoids native Menu CJK font issues)."""
+
+    def __init__(self, root):
+        self._root = root
+        self._top = None
+
+    def show(self, x: int, y: int):
+        self.dismiss()
+        self._top = tk.Toplevel(self._root)
+        self._top.overrideredirect(True)
+        self._top.attributes("-topmost", True)
+        self._top.geometry(f"+{x}+{y}")
+
+        frame = ttk.Frame(self._top, padding=4)
+        frame.pack(fill="both", expand=True)
+
+        mode = self._root._theme_mode
+        items = [
+            (i18n.get("theme_follow_system"), "auto"),
+            (None, None),  # separator
+            (i18n.get("theme_light"), "light"),
+            (i18n.get("theme_dark"), "dark"),
+        ]
+
+        for label, value in items:
+            if label is None:
+                ttk.Separator(frame, orient="horizontal").pack(fill="x", pady=2)
+                continue
+            indicator = " \u2022" if mode == value else ""
+            btn = ttk.Label(
+                frame,
+                text=label + indicator,
+                cursor="hand2",
+                padding=(8, 4),
+            )
+            btn.pack(fill="x", anchor="w")
+            btn.bind("<Enter>", lambda e, w=btn: w.configure(background=self._root.style.colors.selectbg))
+            btn.bind("<Leave>", lambda e, w=btn: w.configure(background=""))
+            btn.bind("<Button-1>", lambda e, v=value: self._select(v))
+
+        self._top.bind("<FocusOut>", lambda e: self.dismiss())
+        self._top.focus_set()
+
+    def _select(self, mode: str):
+        self.dismiss()
+        self._root._set_theme(mode)
+
+    def dismiss(self):
+        if self._top and self._top.winfo_exists():
+            self._top.destroy()
+        self._top = None
+
+
+class Root(ttk.Window):
     def __init__(self):
-        super().__init__()
+        # Load saved theme preference from config
+        cfg = i18n._load_config()
+        self._theme_mode = cfg.get("theme", "auto")  # "auto", "light", "dark"
+        initial_theme = self._resolve_theme()
+
+        super().__init__(themename=initial_theme)
         self.title(i18n.get("window_title"))
-        setStyle()
+
+        # Global font: pick best available CJK-capable font at 10pt
+        family = _pick_font_family()
+        default_font = tkfont.nametofont("TkDefaultFont")
+        default_font.configure(family=family, size=_FONT_SIZE)
+        text_font = tkfont.nametofont("TkTextFont")
+        text_font.configure(family=family, size=_FONT_SIZE)
 
         # Window sizing: ~30% screen area (3/5 width × 1/2 height), centered
         screen_w = self.winfo_screenwidth()
@@ -31,18 +124,28 @@ class Root(Tk):
         self.geometry(f"{win_w}x{win_h}+{x}+{y}")
         self.wm_minsize(640, 400)
 
-        self.rowconfigure(0, weight=0)  # language button row
+        self.rowconfigure(0, weight=0)  # toolbar row
         self.rowconfigure(1, weight=0)  # options (natural size)
         self.rowconfigure(2, weight=1)  # message (fills remaining, has scrollbar)
         self.columnconfigure(0, weight=1)
 
-        # Language menu button (top-left)
-        self._lang_btn = Menubutton(self, text=self._lang_btn_label(), width=8)
+        # Toolbar frame (language + theme buttons)
+        toolbar = ttk.Frame(self)
+        toolbar.grid(row=0, column=0, sticky="nw", padx=5, pady=(5, 0))
+
+        # Language menu button (native Menu OK — "English"/"中文" don't trigger CJK fallback)
+        self._lang_btn = Menubutton(toolbar, text=self._lang_btn_label(), width=8)
         self._lang_menu = Menu(self._lang_btn, tearoff=0)
         self._lang_menu.add_command(label="English", command=lambda: self._set_language("en"))
         self._lang_menu.add_command(label="\u4e2d\u6587", command=lambda: self._set_language("zh"))
         self._lang_btn["menu"] = self._lang_menu
-        self._lang_btn.grid(row=0, column=0, sticky="nw", padx=5, pady=(5, 0))
+        self._lang_btn.pack(side="left", padx=(0, 4))
+
+        # Theme button (custom popup — avoids native Menu CJK font issues)
+        self._theme_popup = _ThemePopup(self)
+        self._theme_btn = ttk.Button(toolbar, text=i18n.get("theme"), width=8,
+                                     command=self._show_theme_popup)
+        self._theme_btn.pack(side="left")
 
         # Option frame
         self.options_frame = OptionFrame(master=self, text=i18n.get("options"))
@@ -55,6 +158,35 @@ class Root(Tk):
         self._closing = False  # re-entry guard for _on_close
         self._wait_deadline = 0.0
         self.protocol("WM_DELETE_WINDOW", self._on_close)
+
+    # --- Theme methods ---
+
+    def _resolve_theme(self) -> str:
+        """Return the ttkbootstrap theme name based on current mode."""
+        if self._theme_mode == "light":
+            return _LIGHT_THEME
+        if self._theme_mode == "dark":
+            return _DARK_THEME
+        # auto: follow system
+        return _DARK_THEME if _detect_system_dark_mode() else _LIGHT_THEME
+
+    def _show_theme_popup(self):
+        btn = self._theme_btn
+        x = btn.winfo_rootx()
+        y = btn.winfo_rooty() + btn.winfo_height()
+        self._theme_popup.show(x, y)
+
+    def _set_theme(self, mode: str):
+        """Switch theme mode, apply, and persist."""
+        self._theme_mode = mode
+        new_theme = self._resolve_theme()
+        self.style.theme_use(new_theme)
+        # Persist to config
+        cfg = i18n._load_config()
+        cfg["theme"] = mode
+        i18n._save_config(cfg)
+
+    # --- Language methods ---
 
     @staticmethod
     def _lang_btn_label() -> str:
@@ -69,6 +201,7 @@ class Root(Tk):
     def _refresh_language(self):
         self.title(i18n.get("window_title"))
         self._lang_btn.configure(text=self._lang_btn_label())
+        self._theme_btn.configure(text=i18n.get("theme"))
         self.options_frame.configure(text=i18n.get("options"))
         self.textFrame.configure(text=i18n.get("message"))
         self.options_frame.refresh_language()

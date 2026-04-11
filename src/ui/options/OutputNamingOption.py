@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from tkinter import StringVar
-from tkinter.ttk import Combobox, Frame, Label
+from ttkbootstrap import Combobox, Frame, Label
 
 import i18n
 from conversion_setting import config

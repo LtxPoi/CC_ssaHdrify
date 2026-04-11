@@ -1,4 +1,4 @@
-from tkinter.ttk import LabelFrame
+from ttkbootstrap import LabelFrame
 
 import i18n
 from ui.options.BrightnessOption import BrightnessOption

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import tkinter
-from tkinter.ttk import Frame, Label, Entry
+from ttkbootstrap import Frame, Label, Entry
 
 import i18n
 from conversion_setting import config

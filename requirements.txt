@@ -4,6 +4,7 @@ colour-science>=0.4.4
 charset-normalizer>=3.4.0
 pysubs2>=1.7.0
 Pillow>=11.0
+ttkbootstrap>=1.10
 
 # Build dependencies (not needed for running):
 # pyinstaller~=6.16.0

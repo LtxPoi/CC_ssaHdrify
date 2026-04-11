@@ -5,7 +5,7 @@ from __future__ import annotations
 from tkinter import StringVar, colorchooser
 import math
 
-from tkinter.ttk import Button, Entry, Frame, Label, LabelFrame
+from ttkbootstrap import Button, Entry, Frame, Label, LabelFrame
 
 import i18n
 from conversion_setting import config

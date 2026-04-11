@@ -1,5 +1,5 @@
 import tkinter
-from tkinter.ttk import Frame, Label, Combobox
+from ttkbootstrap import Frame, Label, Combobox
 
 import i18n
 from conversion_setting import config

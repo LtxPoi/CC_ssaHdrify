@@ -3,7 +3,7 @@ import os
 import tkinter
 import threading
 from tkinter import filedialog, messagebox
-from tkinter.ttk import Button
+from ttkbootstrap import Button
 
 import i18n
 from conversion_setting import config

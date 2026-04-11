@@ -1,6 +1,6 @@
 import queue
 import tkinter
-from tkinter.ttk import LabelFrame, Scrollbar
+from ttkbootstrap import LabelFrame, Scrollbar
 
 
 class QueueStream:
