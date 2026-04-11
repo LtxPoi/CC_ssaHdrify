@@ -62,7 +62,7 @@ def _preprocess_srt_colors(text: str) -> str:
         r, g, b = hex_rgb[0:2], hex_rgb[2:4], hex_rgb[4:6]
         return r'{\1c&H' + b + g + r + '&}'
 
-    text = re.sub(r'<font\b[^>]*\bcolor="?#([0-9a-fA-F]{6})"?[^>]*>', _replace, text, flags=re.IGNORECASE)
+    text = re.sub(r'<font\b[^>]{0,512}\bcolor="?#([0-9a-fA-F]{6})"?[^>]{0,512}>', _replace, text, flags=re.IGNORECASE)
     text = re.sub(r'</font>', r'{\\1c}', text, flags=re.IGNORECASE)
     return text
 

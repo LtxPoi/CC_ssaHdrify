@@ -101,9 +101,16 @@ class _ThemePopup:
             btn.bind("<Leave>", lambda e, w=btn: w.configure(bg=bg))
             btn.bind("<Button-1>", lambda e, v=value: self._on_click(v))
 
-        # Dismiss on click outside: bind to root window + any click on the popup background
-        self._root_bind_id = self._root.bind("<Button-1>", lambda e: self.dismiss(), add="+")
+        # Dismiss on click outside — defer binding by one tick so the triggering click
+        # doesn't immediately fire dismiss (ttk.Button command fires on ButtonRelease,
+        # but edge cases exist with event propagation order)
+        self._root.after_idle(lambda: self._install_dismiss_binding())
         self._top.bind("<Escape>", lambda e: self.dismiss())
+
+    def _install_dismiss_binding(self):
+        """Install root click binding for dismiss, guarded against stale state."""
+        if self._top and self._top.winfo_exists():
+            self._root_bind_id = self._root.bind("<Button-1>", lambda e: self.dismiss(), add="+")
 
     def _on_click(self, mode: str):
         """Handle click: dismiss first, then apply theme via after() to avoid event ordering issues."""

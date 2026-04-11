@@ -241,6 +241,9 @@ def _transform_and_write(sub, fname: str, target_brightness: int | None,
     Shared pipeline for both ASS/SSA and SRT/SUB processing paths.
     """
     for s in sub.styles:
+        if cancel_event is not None and cancel_event.is_set():
+            print(i18n.get("cancelled"))
+            return
         transformColour(s.primary_color, target_brightness, eotf=eotf)
         transformColour(s.secondary_color, target_brightness, eotf=eotf)
         transformColour(s.outline_color, target_brightness, eotf=eotf)
