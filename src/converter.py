@@ -26,6 +26,8 @@ def _parse_ass_color(ass_color: str) -> pysubs2.Color:
     Alpha: 00 = opaque, FF = transparent.
     """
     s = ass_color.lstrip("&Hh").rjust(8, "0")
+    if not all(c in "0123456789abcdefABCDEF" for c in s[:8]):
+        return pysubs2.Color(r=255, g=255, b=255, a=0)  # fallback: opaque white
     a = int(s[0:2], 16)
     b = int(s[2:4], 16)
     g = int(s[4:6], 16)

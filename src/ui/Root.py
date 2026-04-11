@@ -51,6 +51,7 @@ class _ThemePopup:
     def __init__(self, root):
         self._root = root
         self._top = None
+        self._root_bind_id = None
 
     def toggle(self, x: int, y: int):
         """Toggle popup: dismiss if open, show if closed."""
@@ -100,17 +101,20 @@ class _ThemePopup:
             btn.bind("<Leave>", lambda e, w=btn: w.configure(bg=bg))
             btn.bind("<Button-1>", lambda e, v=value: self._on_click(v))
 
-        # Use grab_set to capture all clicks; clicking outside dismisses the popup
-        self._top.grab_set()
+        # Dismiss on click outside: bind to root window + any click on the popup background
+        self._root_bind_id = self._root.bind("<Button-1>", lambda e: self.dismiss(), add="+")
+        self._top.bind("<Escape>", lambda e: self.dismiss())
 
     def _on_click(self, mode: str):
         """Handle click: dismiss first, then apply theme via after() to avoid event ordering issues."""
         self.dismiss()
-        self._root.after(1, lambda: self._root._set_theme(mode))
+        self._root.after(1, lambda: self._root._set_theme(mode) if self._root.winfo_exists() else None)
 
     def dismiss(self):
+        if self._root_bind_id is not None:
+            self._root.unbind("<Button-1>", self._root_bind_id)
+            self._root_bind_id = None
         if self._top and self._top.winfo_exists():
-            self._top.grab_release()
             self._top.destroy()
         self._top = None
 

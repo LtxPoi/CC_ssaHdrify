@@ -44,6 +44,8 @@ class MessageFrame(LabelFrame):
 
         self.updateText()
 
+    _MAX_LINES = 2000
+
     def updateText(self):
         self.text.config(state=tkinter.NORMAL)
         try:
@@ -52,6 +54,10 @@ class MessageFrame(LabelFrame):
                 self.text.insert(tkinter.END, chunk)
         except queue.Empty:
             pass
+        # Trim old lines to prevent unbounded memory growth
+        line_count = int(self.text.index("end-1c").split(".")[0])
+        if line_count > self._MAX_LINES:
+            self.text.delete("1.0", f"{line_count - self._MAX_LINES}.0")
         self.text.config(state=tkinter.DISABLED)
         self.text.see(tkinter.END)  # 自动滚动到最新消息
         self.callbackId = self.after(500, self.updateText)

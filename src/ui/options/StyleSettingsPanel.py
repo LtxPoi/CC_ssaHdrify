@@ -140,6 +140,8 @@ class StyleSettingsPanel(LabelFrame):
             v = float(value)
             if not math.isfinite(v):
                 return
+            if attr == "fps" and v <= 0:
+                return
             setattr(config.style, attr, v)
         except ValueError:
             pass
